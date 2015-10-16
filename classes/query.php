@@ -840,6 +840,15 @@ class Query
 					{
 						$conditional[0] = substr($conditional[0], strlen($this->alias.'.'));
 					}
+
+					// quote bigint columns as integers
+					$column = strpos($conditional[0], '.') ? substr($conditional[0], strlen($this->alias.'.')) : $conditional[0];
+					$properties = call_user_func_array($this->model.'::property', [ $column ]);
+					if ( !empty($properties) && isset($properties['data_type']) && $properties['data_type'] == 'bigint' && ! $conditional[2] instanceof \Fuel\Core\Database_Expression )
+					{
+						$conditional[2] = $this->_quote_bigint($conditional[0], $conditional[2], $this->model);
+					}
+
 					call_fuel_func_array(array($query, $method), $conditional);
 					unset($this->where[$key]);
 				}
@@ -1077,6 +1086,14 @@ class Query
 					if ($dotpos > 0 and array_key_exists($relation, $models))
 					{
 						$conditional[0] = $models[$relation]['table'][1].substr($conditional[0], $dotpos);
+
+						// quote bigint columns as integers
+						$column = substr($conditional[0], strrpos($conditional[0], '.') + 1);
+						$properties = call_user_func_array($models[$relation]['model'].'::property', [ $column ]);
+						if ( !empty($properties) && isset($properties['data_type']) && $properties['data_type'] == 'bigint' && ! $conditional[2] instanceof \Fuel\Core\Database_Expression )
+						{
+							$conditional[2] = $this->_quote_bigint($conditional[0], $conditional[2], $models[$relation]['model']);
+						}
 					}
 				}
 
@@ -1552,6 +1569,34 @@ class Query
 		$this->relations = $tmp_relations;
 
 		return $res > 0;
+	}
+
+	/**
+	 * Quotes a bigint column as an integer rather than a string
+	 *
+	 * @param string $table column
+	 * @param mixed $value column value
+	 * @param string $model table model class name
+	 * @return Database_Expression
+	 */
+	protected function _quote_bigint($column, $value, $model)
+	{
+		if (is_array($value))
+		{
+			foreach ($value as $k => &$v)
+			{
+				if (ctype_digit((string) $v))
+				{
+					$v = new \Fuel\Core\Database_Expression($v);
+				}
+			}
+		}
+		elseif (ctype_digit($value))
+		{
+			$value = new \Fuel\Core\Database_Expression($value);
+		}
+
+		return $value;
 	}
 
 	/**
