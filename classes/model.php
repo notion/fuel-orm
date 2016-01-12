@@ -135,6 +135,11 @@ class Model implements \ArrayAccess, \Iterator, \Sanitization
 	protected static $to_array_references = array();
 
 	/**
+	 * @var  string|null shard value for this model
+	 */
+	protected $shard_value;
+
+	/**
 	 * Create a new model instance
 	 */
 	public static function forge($data = array(), $new = true, $view = null, $cache = true)
@@ -1377,7 +1382,7 @@ class Model implements \ArrayAccess, \Iterator, \Sanitization
 		$this->observe('before_insert');
 
 		// Set all current values
-		$query = Query::forge(get_called_class(), static::connection(true));
+		$query = Query::forge(get_called_class(), static::connection(true), ['shard_value' => $this->get_shard_value()]);
 		$primary_key = static::primary_key();
 		$properties  = array_keys(static::properties());
 		foreach ($properties as $p)
@@ -1429,7 +1434,7 @@ class Model implements \ArrayAccess, \Iterator, \Sanitization
 		$this->observe('before_update');
 
 		// Create the query and limit to primary key(s)
-		$query       = Query::forge(get_called_class(), static::connection(true));
+		$query       = Query::forge(get_called_class(), static::connection(true), ['shard_value' => $this->get_shard_value()]);
 		$primary_key = static::primary_key();
 		$properties  = array_keys(static::properties());
 		//Add the primary keys to the where
@@ -1587,7 +1592,7 @@ class Model implements \ArrayAccess, \Iterator, \Sanitization
 	protected function delete_self()
 	{
 		// Create the query and limit to primary key(s)
-		$query = Query::forge(get_called_class(), static::connection(true))->limit(1);
+		$query = Query::forge(get_called_class(), static::connection(true), ['shard_value' => $this->get_shard_value()])->limit(1);
 		$primary_key = static::primary_key();
 		foreach ($primary_key as $pk)
 		{
@@ -1933,6 +1938,27 @@ class Model implements \ArrayAccess, \Iterator, \Sanitization
 	protected function _sanitize($field, $value)
 	{
 		return \Security::clean($value, null, 'security.output_filter');
+	}
+
+	/**
+	 * Returns the shard value for this model
+	 *
+	 * @return string|null
+	 */
+	public function get_shard_value()
+	{
+		return $this->shard_value;
+	}
+
+	/**
+	 * Sets the shard value for this model
+	 *
+	 * @param string|null $shard_value
+	 */
+	public function set_shard_value($shard_value)
+	{
+		$this->shard_value = $shard_value;
+		return $this;
 	}
 
 	/**

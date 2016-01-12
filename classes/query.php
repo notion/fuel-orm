@@ -124,6 +124,11 @@ class Query
 	protected $from_cache = true;
 
 	/**
+	 * @var  string|null shard value for this model
+	 */
+	protected $shard_value;
+
+	/**
 	 * Create a new instance of the Query class.
 	 *
 	 * @param	string  $model        Name of the model this instance has to operate on
@@ -193,6 +198,9 @@ class Query
 				case 'from_cache':
 					$this->from_cache($val);
 					break;
+				case 'shard_value':
+					$this->shard_value($val);
+					break;
 			}
 		}
 	}
@@ -207,6 +215,19 @@ class Query
 	public function from_cache($cache = true)
 	{
 		$this->from_cache = (bool) $cache;
+
+		return $this;
+	}
+
+	/**
+	 * Returns the shard value for this query
+	 *
+	 * @return string|null
+	 */
+	public function shard_value($shard_value)
+	{
+		if ($shard_value)
+			$this->shard_value = $shard_value;
 
 		return $this;
 	}
@@ -1260,6 +1281,10 @@ class Query
 		$obj->_relate($rel_objs);
 		$obj->_update_original_relations($relations_updated);
 
+		// retain shard value in hydrated model if used for this query
+		if ($this->shard_value)
+			$obj->set_shard_value($this->shard_value);
+
 		return $obj;
 	}
 
@@ -1312,7 +1337,7 @@ class Query
 			}
 		}
 
-		$rows = $query->execute($this->connection)->as_array();
+		$rows = $query->execute($this->connection, $this->shard_value)->as_array();
 
 		// To workaround the PHP 5.x performance issue at pulling a large number of records,
 		// we shouldn't use passing array by reference directly here.
@@ -1424,7 +1449,7 @@ class Query
 
 		$tmp   = $this->build_query($query, $columns, 'count');
 		$query = $tmp['query'];
-		$count = $query->execute($this->connection)->get('count_result');
+		$count = $query->execute($this->connection, $this->shard_value)->get('count_result');
 
 		// Database_Result::get('count_result') returns a string | null
 		if ($count === null)
@@ -1458,7 +1483,7 @@ class Query
 
 		$tmp   = $this->build_query($query, $columns, 'max');
 		$query = $tmp['query'];
-		$max   = $query->execute($this->connection)->get('max_result');
+		$max   = $query->execute($this->connection, $this->shard_value)->get('max_result');
 
 		// Database_Result::get('max_result') returns a string | null
 		if ($max === null)
@@ -1493,7 +1518,7 @@ class Query
 
 		$tmp   = $this->build_query($query, $columns, 'min');
 		$query = $tmp['query'];
-		$min   = $query->execute($this->connection)->get('min_result');
+		$min   = $query->execute($this->connection, $this->shard_value)->get('min_result');
 
 		// Database_Result::get('min_result') returns a string | null
 		if ($min === null)
@@ -1513,7 +1538,7 @@ class Query
 	{
 		$res = \DB::insert(call_user_func($this->model.'::table'), array_keys($this->values))
 			->values(array_values($this->values))
-			->execute($this->write_connection);
+			->execute($this->write_connection, $this->shard_value);
 
 		// Failed to save the new record
 		if ($res[1] === 0)
@@ -1539,7 +1564,7 @@ class Query
 		$query = \DB::update(call_user_func($this->model.'::table'));
 		$tmp   = $this->build_query($query, array(), 'update');
 		$query = $tmp['query'];
-		$res = $query->set($this->values)->execute($this->write_connection);
+		$res = $query->set($this->values)->execute($this->write_connection, $this->shard_value);
 
 		// put back any relations settings
 		$this->relations = $tmp_relations;
@@ -1563,7 +1588,7 @@ class Query
 		$query = \DB::delete(call_user_func($this->model.'::table'));
 		$tmp   = $this->build_query($query, array(), 'delete');
 		$query = $tmp['query'];
-		$res = $query->execute($this->write_connection);
+		$res = $query->execute($this->write_connection, $this->shard_value);
 
 		// put back any relations settings
 		$this->relations = $tmp_relations;

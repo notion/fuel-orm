@@ -144,6 +144,9 @@ class ManyMany extends Relation
 
 		$query->_join($join);
 
+		// propagate shard value into relation models
+		$query->shard_value($from->get_shard_value());
+
 		return $query->get();
 	}
 
