@@ -76,6 +76,9 @@ class HasMany extends Relation
 			}
 		}
 
+		// propagate shard value into relation models
+		$query->shard_value($from->get_shard_value());
+
 		return $query->get();
 	}
 

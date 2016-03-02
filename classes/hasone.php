@@ -66,6 +66,9 @@ class HasOne extends Relation
 			$query->where($condition);
 		}
 
+		// propagate shard value into relation models
+		$query->shard_value($from->get_shard_value());
+
 		return $query->get_one();
 	}
 

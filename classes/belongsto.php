@@ -69,6 +69,10 @@ class BelongsTo extends Relation
 			is_array($condition) or $condition = array($key, '=', $condition);
 			$query->where($condition);
 		}
+
+		// propagate shard value into relation models
+		$query->shard_value($from->get_shard_value());
+
 		return $query->get_one();
 	}
 
