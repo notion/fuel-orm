@@ -1353,8 +1353,6 @@ class Model implements \ArrayAccess, \Iterator, \Sanitization
 			}
 			$this->unfreeze();
 
-			$this->_update_original();
-
 			$this->observe('after_save');
 
 			$use_transaction and $db->commit_transaction();
@@ -1461,6 +1459,9 @@ class Model implements \ArrayAccess, \Iterator, \Sanitization
 		{
 			return false;
 		}
+
+		$this->_original = $this->_data;
+		static::$_cached_objects[get_class($this)][static::implode_pk($this)] = $this;
 
 		// update the original property on success
 		$this->observe('after_update');
