@@ -257,7 +257,8 @@ class Query
 	/**
 	 * Returns the shard value for this query
 	 *
-	 * @return string|null
+	 * @param string|int $shard_value
+	 * @return Query
 	 */
 	public function shard_value($shard_value)
 	{
