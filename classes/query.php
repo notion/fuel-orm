@@ -134,6 +134,11 @@ class Query
 	protected $shard_value;
 
 	/**
+	 * @var bool whether to calculate total number of rows for a query
+	 */
+	protected $calc_found_rows = false;
+
+	/**
 	 * Create a new instance of the Query class.
 	 *
 	 * @param	string  $model        Name of the model this instance has to operate on
@@ -264,6 +269,20 @@ class Query
 	{
 		if ($shard_value)
 			$this->shard_value = $shard_value;
+
+		return $this;
+	}
+
+	/**
+	 * Sets or returns the calc found rows setting for this query
+	 *
+	 * @param bool|null $value
+	 * @return Query
+	 */
+	public function calc_found_rows($value)
+	{
+		if (is_bool($value))
+			$this->calc_found_rows = $value;
 
 		return $this;
 	}
@@ -1002,6 +1021,11 @@ class Query
 			$query->offset($this->offset);
 		}
 
+		if ($type === 'select')
+		{
+			$query->calc_found_rows($this->calc_found_rows);
+		}
+
 		$where_conditions = call_user_func($this->model.'::condition', 'where');
 		empty($where_conditions) or $this->where($where_conditions);
 
@@ -1651,7 +1675,26 @@ class Query
 		$query->from(array($this->_table(), $this->alias));
 
 		$tmp   = $this->build_query($query, $columns, 'count');
+		/** @var Query $query */
 		$query = $tmp['query'];
+
+		$count = $query->execute($this->connection, $this->shard_value)->get('count_result');
+
+		// Database_Result::get('count_result') returns a string | null
+		if ($count === null)
+		{
+			return false;
+		}
+
+		return (int) $count;
+	}
+
+	public function count_found_rows()
+	{
+		$columns = \DB::expr('FOUND_ROWS() AS count_result');
+
+		$query = \DB::select($columns);
+
 		$count = $query->execute($this->connection, $this->shard_value)->get('count_result');
 
 		// Database_Result::get('count_result') returns a string | null
