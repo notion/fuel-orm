@@ -1516,6 +1516,34 @@ class Query
 	}
 
 	/**
+	 * Executes as a sharded query on all shards and returns the combined results
+	 *
+	 * @return array
+	 */
+	public function get_all_shards()
+	{
+		$get_shards = \Notion\App\App::container()->get(\Notion\Domain\Interactor\Database\GetDatabaseShards::class);
+
+		$models = [];
+		if ($shards = $get_shards->execute('mysqli', $this->connection))
+		{
+			foreach ($shards as $shard)
+			{
+				$shard_query = clone $this;
+				$shard_query->shard_value($shard->get_value_high());
+
+				$models = array_replace($models, $shard_query->get());
+			}
+		}
+		else
+		{
+			$models = $this->get();
+		}
+
+		return $models;
+	}
+
+	/**
 	 * Build the query and return hydrated results
 	 *
 	 * @return  array
